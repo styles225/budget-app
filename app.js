@@ -1,22 +1,162 @@
 // on click:
-// - create new inc/exp object
-// - place it in UI
-// - update the data structure
-// - update income
-// - update expenses
+// if values not blank, get values
+// update data structure
+// update UI
 
 
 var model = (function() {
+    var Income, Expense, data;
+
+    Income = function(id,type,desc,val) {
+        this.id = id;
+        this.type = type;
+        this.description = desc;
+        this.value = val;
+    };
+
+    Expense = function(id,type,desc,val) {
+        this.id = id;
+        this.type = type;
+        this.description = desc;
+        this.value = val;
+    };
+
+    data = {
+        allItems: {
+            inc: [],
+            exp: []
+        },
+        total: {
+            inc: 0,
+            exp: 0
+        },
+        budget: 0
+    };
+
+    return {
+        addItem: function(type,desc,val) {
+
+            var newItem, id;
+
+            // create new id
+            if (data.allItems[type].length > 0) {
+                id = data.allItems[type][data.allItems[type].length - 1].id + 1;
+            } else {
+                id = 0;
+            }
+            
+            // create new object--prototype
+            if (type === 'exp') {
+                newItem = new Expense(id,type,desc,val);
+            } else {
+                newItem = new Income(id,type,desc,val);
+            }
+            console.log(newItem);
+
+            // push to correct array
+            data.allItems[type].push(newItem);
+
+            // return value to controller
+            return newItem;
+        },
+        calcBudget: function(type) {
+
+            //console.log(data.allItems[type][data.allItems[type].length - 1].value);
+            var i;
+            data.total[type] = 0;
+            
+            if (data.allItems[type].length === 0) {
+                // data.total[type].value = -1;
+                data.total[type] = -1;
+            } else {
+                for (i = 0; i < data.allItems[type].length; i++) {
+                    data.total[type] += data.allItems[type][i].value;
+                }
+            }
+            data.budget = data.total.inc - data.total.exp;
+        },
+        getBudget: function() {
+            return data;
+        }
+    }
 })();
 
 var view = (function() {
+    var setTemplate = function(selector, templateData) {
+        document.querySelector(selector).innerHTML = templateData
+    };
     return {
         getInput: function() {
             return {
                 type: document.querySelector('.add__type').value,
                 description: document.querySelector('.add__description').value,
-                value: document.querySelector('.add__value').value
+                value: parseFloat(document.querySelector('.add__value').value)
             }
+        },
+        addListItem: function(input) {
+
+            var expList, template, data, incList;
+
+            if (input.type === 'exp') {
+
+                // grab the innerHTML of the handlebars script, which has the handlebar variables
+                expList = document.querySelector('#exp-list').innerHTML;
+
+                // pass the innerHTML w/ handlebar variables into compile script
+                template = Handlebars.compile(expList);
+
+                // take the compile handlebars data & define the handlebar variables
+                data = template({
+                    id: input.id,
+                    type: input.type,
+                    description: input.description,
+                    value: input.value
+                });
+
+                // add the expense item to the list
+                document.querySelector('.expenses__list').innerHTML += data;
+            } else {
+
+                // grab the innerHTML of the handlebars script, which has the handlebar variables
+                incList = document.querySelector('#inc-list').innerHTML;
+
+                // pass the innerHTML w/ handlebar variables into compile script
+                template = Handlebars.compile(incList);
+
+                // take the compile handlebars data & define the handlebar variables
+                data = template({
+                    id: input.id,
+                    type: input.type,
+                    description: input.description,
+                    value: input.value
+                });
+
+                // add the expense item to the list
+                document.querySelector('.income__list').innerHTML += data;
+            }
+        },
+        displayBudget: function(totals) {
+
+            var inc, exp, tot;
+            inc = totals.total.inc;
+            exp = totals.total.exp;
+            tot = inc - exp;
+
+            document.querySelector('.budget__income--value').innerText = `$ ${inc}`;
+            document.querySelector('.budget__expenses--value').innerText = `$ ${exp}`;
+
+            if (inc > exp) {
+                document.querySelector('.budget__value').innerText = `+ $${tot}`;
+            } else {
+                document.querySelector('.budget__value').innerText = `- $${tot}`;
+            }
+        },
+        displayMonth: function() {
+            var today = new Date();
+            var month = today.toLocaleString('default', { month: 'long' });
+
+            document.querySelector('.budget__title--month').innerText = month;
+            console.log(month);
         }
     }
 })();
@@ -25,7 +165,7 @@ var controller = (function(m,v) {
     
     // set up event listeners
     document.querySelector('.add__btn').addEventListener('click', function() {
-        console.log('works');
+        ctrlAddItem();
     });
 
 
@@ -35,11 +175,33 @@ var controller = (function(m,v) {
         }
     });
 
-    function ctrlAddItem(t) {
-        var input = v.getInput();
+    function ctrlAddItem() {
+
+        var input, data, totals;
+        
+        // get input
+        input = v.getInput();
         if ((input.description !== "") && (input.value > 0)) {
             console.log(input);
         }
+
+        // add item to data structure
+        data = m.addItem(input.type,input.description,input.value);
+
+        // add new item to UI
+        v.addListItem(input);
+
+
+        // calculate budget
+        m.calcBudget(input.type);
+
+
+        // retrieve updated values
+        totals = m.getBudget();
+
+        // update UI
+        v.displayBudget(totals);
+        v.displayMonth();
     }
 
 
