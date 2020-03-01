@@ -40,7 +40,8 @@ var model = (function() {
             inc: 0,
             exp: 0
         },
-        budget: 0
+        budget: 0,
+        percentage: 0
     };
 
     return {
@@ -60,7 +61,7 @@ var model = (function() {
                 newItem = new Expense(id,type,desc,val);
 
                 // calc percentage of exp item
-                // newItem.calcPercent();
+                newItem.calcPercent();
                 console.log(newItem);
             } else {
                 newItem = new Income(id,type,desc,val);
@@ -89,6 +90,9 @@ var model = (function() {
         },
         getBudget: function() {
             return data;
+        },
+        calcPercentage: function() {
+            return Math.round(data.total.exp / data.total.inc * 100);
         }
     }
 })();
@@ -108,7 +112,8 @@ var view = (function() {
         budgetExpVal: '.budget__expenses--value',
         budgetVal: '.budget__value',
         month: '.budget__title--month',
-        addBtn: '.add__btn'
+        addBtn: '.add__btn',
+        percentage: '.budget__expenses--percentage'
     };
 
     function setTemplate(selector, templateData) {
@@ -136,25 +141,8 @@ var view = (function() {
             type: input.type,
             description: input.description,
             value: formatNum(input.value),
-            percent: input.percent
+            // percent: input.percent
         });
-        // if (input.type === 'exp') {
-
-        //     context = template({
-        //         id: input.id,
-        //         type: input.type,
-        //         description: input.description,
-        //         value: formatNum(input.value),
-        //         percent: input.percent
-        //     });
-        // } else {
-        //     context = template({
-        //         id: input.id,
-        //         type: input.type,
-        //         description: input.description,
-        //         value: formatNum(input.value)
-        //     });
-        // }
 
         // add the expense item to the list
         document.querySelector(htmlSelect).innerHTML += context;
@@ -209,6 +197,10 @@ var view = (function() {
         },
         getDOM: function() {
             return DOM;
+        },
+        displayPercentage: function(percent) {
+            //
+            document.querySelector(DOM.percentage).innerText = `${percent}%`;
         }
     }
 })();
@@ -225,6 +217,7 @@ var controller = (function(m,v) {
 
         // set everything in UI to zero
         v.displayBudget(x);
+        v.displayPercentage(0);
 
         // display month
         v.displayMonth();
@@ -241,7 +234,7 @@ var controller = (function(m,v) {
     });
 
     function ctrlAddItem() {
-        var input, data, totals;
+        var input, data, totals, percentage;
         
         // get input
         input = v.getInput();
@@ -259,9 +252,11 @@ var controller = (function(m,v) {
 
             // retrieve updated values
             totals = m.getBudget();
+            percentage = m.calcPercentage();
 
             // update budget UI
             v.displayBudget(totals);
+            v.displayPercentage(percentage);
 
             // clear input fields
             v.clearInput();
@@ -269,3 +264,9 @@ var controller = (function(m,v) {
     }
     init();
 })(model, view);
+
+
+// next: delete functionality. 
+window.addEventListener('click', function(e) {
+    console.log(e);
+});
