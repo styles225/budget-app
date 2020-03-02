@@ -62,7 +62,6 @@ var model = (function() {
 
                 // calc percentage of exp item
                 newItem.calcPercent();
-                console.log(newItem);
             } else {
                 newItem = new Income(id,type,desc,val);
             }
@@ -92,7 +91,17 @@ var model = (function() {
             return data;
         },
         calcPercentage: function() {
-            return Math.round(data.total.exp / data.total.inc * 100);
+            data.percentage = Math.round(data.total.exp / data.total.inc * 100);
+            return data.percentage;
+        },
+        deleteListData: function(type,id) {
+            var i;
+
+            for (i = 0; i < data.allItems[type].length; i++) {
+                if (data.allItems[type][i].id === id) {
+                    data.allItems[type].splice(i, 1);
+                }
+            }
         }
     }
 })();
@@ -104,16 +113,18 @@ var view = (function() {
         addType: '.add__type',
         addDesc: '.add__description',
         addVal: '.add__value',
-        expListID: '#exp-list',
+        expListID: '.exp-list',
         expListClass: '.expenses__list',
-        incListID: '#inc-list',
+        incListID: '.inc-list',
         incListClass: '.income__list',
         budgetIncVal: '.budget__income--value',
         budgetExpVal: '.budget__expenses--value',
         budgetVal: '.budget__value',
         month: '.budget__title--month',
         addBtn: '.add__btn',
-        percentage: '.budget__expenses--percentage'
+        percentage: '.budget__expenses--percentage',
+        container: '.container',
+        expVal: 'exp__indicator'
     };
 
     function setTemplate(selector, templateData) {
@@ -201,6 +212,20 @@ var view = (function() {
         displayPercentage: function(percent) {
             //
             document.querySelector(DOM.percentage).innerText = `${percent}%`;
+        },
+        deleteListItem: function(id) {
+            var el;
+            el = document.getElementById(id);
+            el.parentNode.removeChild(el);
+
+        },
+        expColor: function() {
+            var expFields, i;
+            expFields = [DOM.addType,DOM.addDesc,DOM.addVal,DOM.addBtn];
+            
+            for (i = 0; i < expFields.length; i++) {
+                document.querySelector(expFields[i]).classList.toggle(DOM.expVal);
+            }
         }
     }
 })();
@@ -221,17 +246,31 @@ var controller = (function(m,v) {
 
         // display month
         v.displayMonth();
+
+        // set up event listeners
+        setupEventListeners();
     }
     
     // set up event listeners
-    document.querySelector(DOMstrings.addBtn).addEventListener('click', function() {
-        ctrlAddItem();
-    });
-    window.addEventListener('keypress', function(e) {
-        if (e.keyCode === 13 || e.which === 13) {
-            ctrlAddItem();
-        }
-    });
+    function setupEventListeners() {
+
+        // event listener for add item
+        document.querySelector(DOMstrings.addBtn).addEventListener('click',ctrlAddItem);
+
+        // event listener to add item if user presses 'Enter' key
+        window.addEventListener('keypress', function(e) {
+            if (e.keyCode === 13 || e.which === 13) {
+                ctrlAddItem();
+            }
+        });
+
+        // event listener for delete button
+        document.querySelector(DOMstrings.container).addEventListener('click', ctrlDeleteItem);
+
+        // set up input field event listeners
+        document.querySelector(DOMstrings.addType).addEventListener('change', expensify);
+    }
+
 
     function ctrlAddItem() {
         var input, data, totals, percentage;
@@ -239,10 +278,9 @@ var controller = (function(m,v) {
         // get input
         input = v.getInput();
         if ((input.description !== "") && (input.value > 0)) {
-    
+
             // add item to data structure
             data = m.addItem(input.type,input.description,input.value);
-            console.log(data);
 
             // add new item to UI
             v.addListItem(data);
@@ -262,11 +300,31 @@ var controller = (function(m,v) {
             v.clearInput();
         }
     }
+    function ctrlDeleteItem(e) {
+
+        var parentDiv, splitID, type, id, totals, perfentage;
+        parentDiv = e.target.closest('.item.clearfix').id;
+        splitID = parentDiv.split('-');
+        type = splitID[0];
+        id = parseInt(splitID[1]);
+
+        if (parentDiv && (e.srcElement.className == 'ion-ios-close-outline')) {
+
+            m.deleteListData(type,id);
+            v.deleteListItem(parentDiv);
+            m.calcBudget(type);
+            totals = m.getBudget();
+
+
+            percentage = m.calcPercentage();
+
+            // update budget UI
+            v.displayBudget(totals);
+            v.displayPercentage(percentage);
+        }
+    }
+    function expensify() {
+        v.expColor();
+    } 
     init();
 })(model, view);
-
-
-// next: delete functionality. 
-window.addEventListener('click', function(e) {
-    console.log(e);
-});
